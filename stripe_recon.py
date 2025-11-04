@@ -9,7 +9,6 @@ Output: <date>.csv written to active directory. <date> is derived from name of S
 If debug flag is set, prints product, taxes, and summary dataframes to console instead."""
 
 import argparse
-import sys
 
 import numpy as np
 import pandas as pd
@@ -17,19 +16,19 @@ import pandas as pd
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Process Stripe file and one or more Commerce7 files.'
+        description='Process paths for reconciling Stripe with C7'
     )
 
-    # Flag
+    # Debug flag
     parser.add_argument(
-        '-d', '--debug', action='store_true', help='Enable debug logging'
+        '-d', '--debug', action='store_true', help='Enable debug output'
     )
 
-    # First positional argument (exactly one)
-    parser.add_argument('stripe_path', help='Path to the Stripe file')
+    # Stripe path (always 1)
+    parser.add_argument('stripe', help='Path to the Stripe file')
 
-    # Remaining positional args (zero or more)
-    parser.add_argument('commerce7_paths', nargs='*', help='Paths to Commerce7 files')
+    # C7 paths (one or more)
+    parser.add_argument('commerce7', nargs='+', help='Paths to Commerce7 files')
 
     return parser.parse_args()
 
@@ -178,11 +177,17 @@ def reconcile(stripe_path: str, c7_path: str, debug=False):
         print(date)
 
         try:
-            summary.to_csv(f'{date}.csv', index=False, header=False)
+            pass
+            # summary.to_csv(f'{date}.csv', index=False, header=False)
         except Exception as e:
             print(e)
 
 
 if __name__ == '__main__':
-    sys.argv[1]
-    reconcile()
+    # Resolve CLI args
+    args = parse_args()
+    stripe_path = args.stripe
+    commerce7 = args.commerce7
+    debug = args.debug
+
+    print(stripe_path, commerce7, debug)
