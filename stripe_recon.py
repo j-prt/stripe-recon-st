@@ -12,6 +12,8 @@ import argparse
 
 import pandas as pd
 
+from cleaner import clean_c7
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -27,7 +29,7 @@ def parse_args():
     parser.add_argument('stripe', help='Path to the Stripe file')
 
     # C7 paths (one or more)
-    parser.add_argument('commerce7', nargs='+', help='Paths to Commerce7 files')
+    parser.add_argument('commerce7', help='Path to Commerce7 files')
 
     return parser.parse_args()
 
@@ -55,14 +57,11 @@ def process_products(df: pd.DataFrame) -> pd.DataFrame:
     return product_df
 
 
-def read_c7(commerce7: list[str]) -> pd.DataFrame:
-    if len(commerce7) == 1:
-        if commerce7[0].endswith('.xlsx'):
-            df = pd.read_excel(commerce7[0], sheet_name='All Data')
-        else:
-            df = pd.read_csv(commerce7[0])
+def read_c7(path: str) -> pd.DataFrame:
+    if path.endswith('.xlsx'):
+        df = pd.read_excel(path, sheet_name='All Data')
     else:
-        return
+        df = pd.read_csv(path)
 
     return df
 
@@ -121,12 +120,10 @@ def read_stripe(path: str) -> tuple[float, float]:
     fees = -stripe['Fees'].sum().round(2)
     deposit = stripe['Net'].sum().round(2)
 
-    return fees, deposit
+    return stripe, fees, deposit
 
 
-def reconcile(stripe: tuple[float, float], c7: str, debug=False):
-    stripe_fees, stripe_deposit = read_stripe(stripe_path)
-
+def reconcile(fees: float, deposit: float, c7: pd.DataFrame, debug=False):
     product_df = process_products(c7)
     taxes_df = process_taxes(c7)
 
@@ -135,10 +132,8 @@ def reconcile(stripe: tuple[float, float], c7: str, debug=False):
         print(product_df)
 
     # Calculate deposit amount, sanity check
-    deposit_amount = (
-        product_df.Subtotal.sum() + taxes_df.Count.sum() + stripe_fees
-    ).round(2)
-    assert deposit_amount == stripe_deposit.round(2), (
+    deposit_amount = (product_df.Subtotal.sum() + taxes_df.Count.sum() + fees).round(2)
+    assert deposit_amount == deposit.round(2), (
         'Deposit total does not match Stripe Invoice'
     )
 
@@ -148,7 +143,7 @@ def reconcile(stripe: tuple[float, float], c7: str, debug=False):
         [[deposit_amount, '']], columns=['Count', 'Subtotal'], index=['Deposit Amount']
     )
     stripe_row = pd.DataFrame(
-        [[stripe_fees, '']], columns=['Count', 'Subtotal'], index=['Stripe Fees']
+        [[fees, '']], columns=['Count', 'Subtotal'], index=['Stripe Fees']
     )
     product_row = pd.DataFrame(
         [['', '']], columns=['Count', 'Subtotal'], index=['Product']
@@ -168,7 +163,27 @@ def reconcile(stripe: tuple[float, float], c7: str, debug=False):
     )
     summary = summary.reset_index().fillna('')
 
-    # Write the summary to csv in James' Format:
+    return summary
+
+
+if __name__ == '__main__':
+    # Resolve CLI args
+    args = parse_args()
+    stripe_path = args.stripe
+    commerce7_path = args.commerce7
+    debug = args.debug
+
+    if debug:
+        print(stripe_path, commerce7_path, debug)
+
+    stripe, fees, deposit = read_stripe(stripe_path)
+    c7 = read_c7(commerce7_path)
+    c7 = clean_c7(stripe, c7)
+
+    if debug:
+        print(type(c7))
+
+    summary = reconcile(fees, deposit, c7, debug)
 
     if debug:
         print(summary)
@@ -182,17 +197,3 @@ def reconcile(stripe: tuple[float, float], c7: str, debug=False):
             summary.to_csv(f'{date}.csv', index=False, header=False)
         except Exception as e:
             print(e)
-
-
-if __name__ == '__main__':
-    # Resolve CLI args
-    args = parse_args()
-    stripe_path = args.stripe
-    commerce7 = args.commerce7
-    debug = args.debug
-
-    print(stripe_path, commerce7, debug)
-
-    c7 = read_c7(commerce7)
-
-    reconcile(stripe_path, c7, debug)
