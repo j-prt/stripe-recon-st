@@ -36,3 +36,7 @@ def main():
         finish = datetime.strftime(finish + delta, '%Y-%m-%dT%H:%M:%S.000Z')
 
         print(f'{NICHE_URL}{start}|{finish}')
+
+
+if __name__ == '__main__':
+    main()
