@@ -10,7 +10,6 @@ If debug flag is set, prints product, taxes, and summary dataframes to console i
 
 import argparse
 
-import numpy as np
 import pandas as pd
 
 
@@ -31,11 +30,6 @@ def parse_args():
     parser.add_argument('commerce7', nargs='+', help='Paths to Commerce7 files')
 
     return parser.parse_args()
-
-
-if __name__ == '__main__':
-    args = parse_args()
-    print(args)
 
 
 def process_products(df: pd.DataFrame) -> pd.DataFrame:
@@ -59,6 +53,18 @@ def process_products(df: pd.DataFrame) -> pd.DataFrame:
     product_df = pd.DataFrame(product_totals, columns=product_headers)
 
     return product_df
+
+
+def read_c7(commerce7: list[str]) -> pd.DataFrame:
+    if len(commerce7) == 1:
+        if commerce7[0].endswith('.xlsx'):
+            df = pd.read_excel(commerce7[0], sheet_name='All Data')
+        else:
+            df = pd.read_csv(commerce7[0])
+    else:
+        return
+
+    return df
 
 
 def process_taxes(df: pd.DataFrame) -> pd.DataFrame:
@@ -109,7 +115,7 @@ def process_taxes(df: pd.DataFrame) -> pd.DataFrame:
     return taxes_df
 
 
-def read_stripe(path: str) -> tuple[np.float64, np.float64]:
+def read_stripe(path: str) -> tuple[float, float]:
     """Read the stripe file and returns"""
     stripe = pd.read_csv(path)
     fees = -stripe['Fees'].sum().round(2)
@@ -118,16 +124,11 @@ def read_stripe(path: str) -> tuple[np.float64, np.float64]:
     return fees, deposit
 
 
-def reconcile(stripe_path: str, c7_path: str, debug=False):
+def reconcile(stripe: tuple[float, float], c7: str, debug=False):
     stripe_fees, stripe_deposit = read_stripe(stripe_path)
 
-    if c7_path.endswith('.xlsx'):
-        df = pd.read_excel(c7_path, sheet_name='All Data')
-    else:
-        df = pd.read_csv(c7_path)
-
-    product_df = process_products(df)
-    taxes_df = process_taxes(df)
+    product_df = process_products(c7)
+    taxes_df = process_taxes(c7)
 
     if debug:
         print(taxes_df)
@@ -173,12 +174,12 @@ def reconcile(stripe_path: str, c7_path: str, debug=False):
         print(summary)
     else:
         # Get date from stripe path
-        date = '_'.join(stripe_path.split()[:2])
+        date = '_'.join(stripe_path.split('.')[0].split()[:2])
         print(date)
 
         try:
             pass
-            # summary.to_csv(f'{date}.csv', index=False, header=False)
+            summary.to_csv(f'{date}.csv', index=False, header=False)
         except Exception as e:
             print(e)
 
@@ -191,3 +192,7 @@ if __name__ == '__main__':
     debug = args.debug
 
     print(stripe_path, commerce7, debug)
+
+    c7 = read_c7(commerce7)
+
+    reconcile(stripe_path, c7, debug)
