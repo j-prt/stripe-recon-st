@@ -190,7 +190,6 @@ if __name__ == '__main__':
     else:
         # Get date from stripe path
         date = '_'.join(stripe_path.split('.')[0].split()[:2])
-        print(date)
 
         try:
             pass
