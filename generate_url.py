@@ -13,8 +13,8 @@ DELTA_MIN = 5
 NICHE_URL = 'https://niche-wine-company.admin.platform.commerce7.com/store/order?orderPaidDate=btw:'
 
 
-def main():
-    with open(sys.argv[1]) as f:
+def generate(path):
+    with open(path) as f:
         reader = csv.reader(f)
 
         # Skip header
@@ -35,8 +35,10 @@ def main():
         start = datetime.strftime(start - delta, '%Y-%m-%dT%H:%M:%S.000Z')
         finish = datetime.strftime(finish + delta, '%Y-%m-%dT%H:%M:%S.000Z')
 
-        print(f'{NICHE_URL}{start}|{finish}')
+        return f'{NICHE_URL}{start}|{finish}'
 
 
 if __name__ == '__main__':
-    main()
+    path = sys.argv[1]
+    url = generate(path)
+    print(url)
