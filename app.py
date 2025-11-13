@@ -11,6 +11,17 @@ from generate_url import generate
 if 'uploader_version' not in st.session_state:
     st.session_state.uploader_version = 0
 
+st.session_state.error = False
+
+
+def reset():
+    for key in ('stripe', 'c7'):
+        if key in st.session_state:
+            del st.session_state[key]
+    st.session_state.uploader_version += 1
+    st.rerun()
+
+
 st.title('Stripe Reconciliation')
 
 st.header('Step 1: Upload Stripe File (csv)')
@@ -36,41 +47,45 @@ if stripe_file is not None:
         c7 = pd.read_csv(commerce7)
         c7 = clean_c7(stripe, c7)
 
-        # TODO: remove after testing
-        print(c7, stripe)
-        print(len(c7['Order Number'].unique()), len(stripe))
-
-        results = sr.reconcile(fees, deposit, c7, False, True)
-
-        st.subheader('Download Summary CSV')
-        csv_bytes = results['summary'].to_csv(index=False, header=False).encode('utf-8')
-        st.download_button(
-            label='Download Summary CSV',
-            data=csv_bytes,
-            file_name='output.csv',
-            mime='text/csv',
-        )
-
-        st.subheader('Download Complete Excel Workbook')
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            c7.to_excel(writer, sheet_name='All Data', index=False)
-            results['products'].to_excel(writer, sheet_name='Products', index=False)
-            results['taxes'].to_excel(writer, sheet_name='Taxes', index=True)
-            results['summary'].to_excel(
-                writer, sheet_name='Summary', index=False, header=False
+        try:
+            results = sr.reconcile(fees, deposit, c7, False, True)
+        except Exception:
+            st.session_state.error = True
+            st.write(
+                'Error: Commerce7 file cannot be reconciled with Stripe file. \n'
+                'Check that the correct date range was used, and order details were exported.'
             )
-        output.seek(0)
-        st.download_button(
-            label='Download Complete Excel workbook',
-            data=output,
-            file_name='output.xlsx',
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )
+            if st.button('Try Again'):
+                reset()
 
-        if st.button('Start Over 🔄'):
-            for key in ('stripe', 'c7'):
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.session_state.uploader_version += 1
-            st.rerun()
+        if not st.session_state.error:
+            st.subheader('Download Summary CSV')
+            csv_bytes = (
+                results['summary'].to_csv(index=False, header=False).encode('utf-8')
+            )
+            st.download_button(
+                label='Download Summary CSV',
+                data=csv_bytes,
+                file_name='output.csv',
+                mime='text/csv',
+            )
+
+            st.subheader('Download Complete Excel Workbook')
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                c7.to_excel(writer, sheet_name='All Data', index=False)
+                results['products'].to_excel(writer, sheet_name='Products', index=False)
+                results['taxes'].to_excel(writer, sheet_name='Taxes', index=True)
+                results['summary'].to_excel(
+                    writer, sheet_name='Summary', index=False, header=False
+                )
+            output.seek(0)
+            st.download_button(
+                label='Download Complete Excel workbook',
+                data=output,
+                file_name='output.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+
+            if st.button('Start Over 🔄'):
+                reset()
