@@ -123,7 +123,7 @@ def read_stripe(path: str) -> tuple[float, float]:
     return stripe, fees, deposit
 
 
-def reconcile(fees: float, deposit: float, c7: pd.DataFrame, debug=False):
+def reconcile(fees: float, deposit: float, c7: pd.DataFrame, debug=False, excel=False):
     product_df = process_products(c7)
     taxes_df = process_taxes(c7)
 
@@ -163,7 +163,14 @@ def reconcile(fees: float, deposit: float, c7: pd.DataFrame, debug=False):
     )
     summary = summary.reset_index().fillna('')
 
-    return summary
+    if not excel:
+        return summary
+
+    return {
+        'summary': summary,
+        'taxes': taxes_df,
+        'products': product_df,
+    }
 
 
 if __name__ == '__main__':

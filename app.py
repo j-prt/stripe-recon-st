@@ -40,15 +40,32 @@ if stripe_file is not None:
         print(c7, stripe)
         print(len(c7['Order Number'].unique()), len(stripe))
 
-        summary = sr.reconcile(fees, deposit, c7, False)
+        results = sr.reconcile(fees, deposit, c7, False, True)
 
-        st.subheader('Download Summary Output')
-        csv_bytes = summary.to_csv(index=False, header=False).encode('utf-8')
+        st.subheader('Download Summary CSV')
+        csv_bytes = results['summary'].to_csv(index=False, header=False).encode('utf-8')
         st.download_button(
             label='Download Summary CSV',
             data=csv_bytes,
             file_name='output.csv',
             mime='text/csv',
+        )
+
+        st.subheader('Download Complete Excel Workbook')
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            c7.to_excel(writer, sheet_name='All Data', index=False)
+            results['products'].to_excel(writer, sheet_name='Products', index=False)
+            results['taxes'].to_excel(writer, sheet_name='Taxes', index=True)
+            results['summary'].to_excel(
+                writer, sheet_name='Summary', index=False, header=False
+            )
+        output.seek(0)
+        st.download_button(
+            label='Download Complete Excel workbook',
+            data=output,
+            file_name='output.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
 
         if st.button('Start Over 🔄'):
