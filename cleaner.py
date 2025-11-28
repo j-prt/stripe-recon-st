@@ -44,9 +44,17 @@ def find_orders(to_match, row):
     return False
 
 
-def _clean_c7(stripe, c7_df):
-    # Prep
+def clean_c7(stripe, c7_df):
+    # Prep for c7
+    # Step to fix the incorrect order numbers from C7 refunds
+    c7_df['Order2'] = c7_df['Order Number'].copy()
+    c7_df.loc[~c7_df['Refund/Exchange From Order Number'].isna(), 'Order2'] = c7_df.loc[
+        ~c7_df['Refund/Exchange From Order Number'].isna(),
+        'Refund/Exchange From Order Number',
+    ].astype(int)
     deduped = c7_df[~c7_df['Order Number'].duplicated()]
+
+    # Prep for stripe
     non_null = stripe[~stripe.Description.isna()]
     null = stripe[stripe.Description.isna()]
 
@@ -56,14 +64,17 @@ def _clean_c7(stripe, c7_df):
     # Extract info from the null rows
     to_match = extract_null_info(null)
 
+    # Remove found orders from deduped
+    deduped = deduped[~(deduped['Order2'].isin(orders) | deduped['Total'] < 0)]
+
     # Pull out the remaining order numbers
     more_orders = deduped[
         deduped.apply(lambda row: find_orders(to_match, row), axis=1)
-    ]['Order Number'].values
+    ]['Order2'].values
 
     all_orders = np.concatenate((orders, more_orders))
 
-    return c7_df[c7_df['Order Number'].isin(all_orders)]
+    return c7_df[c7_df['Order2'].isin(all_orders)]
 
 
 # It turns out, stripe uses the original order # for refunds,
@@ -71,7 +82,7 @@ def _clean_c7(stripe, c7_df):
 # existing order numbers are correct leads to errors. Lesson learned!
 
 
-def clean_c7(stripe, c7_df):
+def _clean_c7(stripe, c7_df):
     # Prep
     deduped = c7_df[~c7_df['Order Number'].duplicated()]
 

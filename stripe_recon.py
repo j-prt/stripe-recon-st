@@ -119,7 +119,7 @@ def read_stripe(path: str) -> tuple[float, float]:
     stripe = pd.read_csv(path)
     fees = -stripe['Fees'].sum().round(2)
     deposit = stripe['Net'].sum().round(2)
-
+    print('🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍', stripe['Net'].sum())
     return stripe, fees, deposit
 
 
@@ -133,6 +133,13 @@ def reconcile(fees: float, deposit: float, c7: pd.DataFrame, debug=False, excel=
 
     # Calculate deposit amount, sanity check
     deposit_amount = (product_df.Subtotal.sum() + taxes_df.Count.sum() + fees).round(2)
+    print(
+        '🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍',
+        product_df.Subtotal.sum(),
+        taxes_df.Count.sum(),
+        fees,
+    )
+    print(deposit_amount, deposit.round(2))
     assert deposit_amount == deposit.round(2), (
         'Deposit total does not match Stripe Invoice'
     )
