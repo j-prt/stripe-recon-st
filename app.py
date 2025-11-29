@@ -47,17 +47,19 @@ if stripe_file is not None:
         c7 = pd.read_csv(commerce7)
         c7 = clean_c7(stripe, c7)
 
-        print('✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️')
-        print(
-            'c7 len:',
-            len(c7[~c7.duplicated('Order Number')]),
-            'stripe len:',
-            len(stripe),
-        )
+        # DEBUG
+        # print('✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️✌️')
+        # print(
+        #     'c7 len:',
+        #     len(c7[~c7.duplicated('Order Number')]),
+        #     'stripe len:',
+        #     len(stripe),
+        # )
         try:
             results = sr.reconcile(fees, deposit, c7, True, True)
         except Exception as e:
-            print(e)
+            # DEBUG
+            # print(e)
             st.session_state.error = True
             st.write(
                 'Error: Commerce7 file cannot be reconciled with Stripe file. \n'
