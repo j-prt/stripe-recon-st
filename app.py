@@ -57,9 +57,7 @@ if stripe_file is not None:
         # )
         try:
             results = sr.reconcile(fees, deposit, c7, True, True)
-        except Exception as e:
-            # DEBUG
-            # print(e)
+        except Exception:
             st.session_state.error = True
             st.write(
                 'Error: Commerce7 file cannot be reconciled with Stripe file. \n'
